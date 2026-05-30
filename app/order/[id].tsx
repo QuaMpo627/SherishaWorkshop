@@ -20,6 +20,8 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { RolePill } from '@/components/ui/RolePill';
 import { SheetVisualizer } from '@/components/feature/SheetVisualizer';
 import { Button } from '@/components/ui/Button';
+import { ExecutionFiles } from '@/components/feature/ExecutionFiles';
+import { useExecutionFiles } from '@/hooks/useExecutionFiles';
 import { totalAreaCm2, totalPieces } from '@/services/nestingService';
 import { formatDateTime } from '@/services/weekService';
 
@@ -28,6 +30,7 @@ export default function OrderDetailScreen() {
   const router = useRouter();
   const { showAlert } = useAlert();
   const { orders, updateStatus, setActualSheets, deleteOrder, user } = useOrders();
+  const fileActions = useExecutionFiles();
 
   const order = useMemo(() => orders.find((o) => o.id === id), [orders, id]);
   const [actualInput, setActualInput] = useState(
@@ -183,6 +186,17 @@ export default function OrderDetailScreen() {
               </View>
             ))}
           </View>
+
+          {/* Execution files */}
+          <ExecutionFiles
+            files={order.executionFiles ?? []}
+            canEdit={isManager}
+            onAdd={() => fileActions.pickAndAttach(order.id, order.name)}
+            onRemove={(fileId) => {
+              const file = order.executionFiles?.find((f) => f.id === fileId);
+              fileActions.remove(order.id, fileId, file?.name);
+            }}
+          />
 
           {/* Actions */}
           {canEdit ? (

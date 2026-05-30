@@ -4,7 +4,7 @@ import { genId, loadOrders, saveOrders } from '@/services/orderService';
 import { storage } from '@/services/storageService';
 import { estimateSheets } from '@/services/nestingService';
 import { getWorkshopWeek, isInWeek } from '@/services/weekService';
-import { AppUser, Order, OrderStatus, Shape } from '@/services/types';
+import { AppUser, ExecutionFile, Order, OrderStatus, Shape } from '@/services/types';
 
 export interface CreateOrderInput {
   name: string;
@@ -22,8 +22,14 @@ interface OrdersContextValue {
   archivedOrders: Order[];
   createOrder: (input: CreateOrderInput) => Order;
   updateStatus: (orderId: string, status: OrderStatus) => void;
+  bulkUpdateStatus: (orderIds: string[], status: OrderStatus) => void;
   setActualSheets: (orderId: string, count: number) => void;
   deleteOrder: (orderId: string) => void;
+  addExecutionFile: (
+    orderId: string,
+    file: Omit<ExecutionFile, 'id' | 'addedAt'>,
+  ) => void;
+  removeExecutionFile: (orderId: string, fileId: string) => void;
   visibleOrders: Order[];
 }
 
@@ -94,6 +100,18 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const bulkUpdateStatus = (orderIds: string[], status: OrderStatus) => {
+    if (orderIds.length === 0) return;
+    const ids = new Set(orderIds);
+    setOrders((prev) =>
+      prev.map((o) =>
+        ids.has(o.id)
+          ? { ...o, status, completedAt: status === 'done' ? Date.now() : undefined }
+          : o,
+      ),
+    );
+  };
+
   const setActualSheets = (orderId: string, count: number) => {
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, actualSheets: count } : o)),
@@ -102,6 +120,38 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
 
   const deleteOrder = (orderId: string) => {
     setOrders((prev) => prev.filter((o) => o.id !== orderId));
+  };
+
+  const addExecutionFile = (
+    orderId: string,
+    file: Omit<ExecutionFile, 'id' | 'addedAt'>,
+  ) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              executionFiles: [
+                ...(o.executionFiles ?? []),
+                { ...file, id: genId('f'), addedAt: Date.now() },
+              ],
+            }
+          : o,
+      ),
+    );
+  };
+
+  const removeExecutionFile = (orderId: string, fileId: string) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              executionFiles: (o.executionFiles ?? []).filter((f) => f.id !== fileId),
+            }
+          : o,
+      ),
+    );
   };
 
   const visibleOrders = useMemo(() => {
@@ -128,8 +178,11 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     archivedOrders,
     createOrder,
     updateStatus,
+    bulkUpdateStatus,
     setActualSheets,
     deleteOrder,
+    addExecutionFile,
+    removeExecutionFile,
     visibleOrders,
   };
 
@@ -184,6 +237,24 @@ function seedDemoOrders(): Order[] {
       status: 'done',
       estimatedSheets: 0,
       actualSheets: 4,
+      executionFiles: [
+        {
+          id: 'f_seed_1',
+          name: 'reception_panels_v2.dxf',
+          uri: 'file://demo/reception_panels_v2.dxf',
+          size: 142_336,
+          mimeType: 'application/dxf',
+          addedAt: now - day,
+        },
+        {
+          id: 'f_seed_2',
+          name: 'cut_plan_summary.pdf',
+          uri: 'file://demo/cut_plan_summary.pdf',
+          size: 84_120,
+          mimeType: 'application/pdf',
+          addedAt: now - day + 3_600_000,
+        },
+      ],
       createdAt: now - 2 * day,
       completedAt: now - day,
       weekKey: week.key,

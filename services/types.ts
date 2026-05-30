@@ -21,6 +21,15 @@ export interface Shape {
 
 export type OrderStatus = 'pending' | 'done';
 
+export interface ExecutionFile {
+  id: string;
+  name: string;
+  uri: string;
+  size?: number;
+  mimeType?: string;
+  addedAt: number;
+}
+
 export interface Order {
   id: string;
   userId: string;
@@ -33,7 +42,7 @@ export interface Order {
   status: OrderStatus;
   estimatedSheets: number;
   actualSheets?: number;
-  executionFiles?: string[];
+  executionFiles?: ExecutionFile[];
   createdAt: number;
   completedAt?: number;
   weekKey: string; // e.g. 2026-W22
