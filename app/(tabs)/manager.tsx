@@ -1,6 +1,7 @@
 // Powered by OnSpace.AI
 import React, { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   SectionList,
@@ -13,6 +14,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, radius, spacing, typography } from '@/constants/theme';
 import { useOrders } from '@/hooks/useOrders';
 import { useExecutionFiles } from '@/hooks/useExecutionFiles';
+import { useManagerReport } from '@/hooks/useManagerReport';
 import { useAlert } from '@/template';
 import { ManagerOrderRow } from '@/components/feature/ManagerOrderRow';
 import { RolePill } from '@/components/ui/RolePill';
@@ -33,6 +35,7 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 export default function ManagerScreen() {
   const { user, setUser, currentWeekOrders, bulkUpdateStatus } = useOrders();
   const { pickAndAttach, remove } = useExecutionFiles();
+  const { exportPdf, exporting } = useManagerReport();
   const { showAlert } = useAlert();
 
   const [filter, setFilter] = useState<FilterKey>('all');
@@ -277,6 +280,41 @@ export default function ManagerScreen() {
                 </Text>
               </View>
             ) : null}
+
+            <Pressable
+              onPress={exportPdf}
+              disabled={exporting}
+              style={({ pressed }) => [
+                styles.exportBtn,
+                pressed && !exporting && { opacity: 0.85 },
+                exporting && { opacity: 0.7 },
+              ]}
+            >
+              <View style={styles.exportIcon}>
+                {exporting ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <MaterialCommunityIcons
+                    name="file-pdf-box"
+                    size={22}
+                    color={colors.primary}
+                  />
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.exportTitle}>
+                  {exporting ? 'Generating PDF…' : 'Share weekly triage report'}
+                </Text>
+                <Text style={styles.exportSubtitle}>
+                  PDF · WhatsApp · Telegram · Email
+                </Text>
+              </View>
+              <MaterialCommunityIcons
+                name="share-variant"
+                size={18}
+                color={colors.textSecondary}
+              />
+            </Pressable>
 
             <View style={styles.filterRow}>
               <ScrollView
@@ -532,6 +570,37 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
     flex: 1,
+  },
+  exportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  exportIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.sm,
+    backgroundColor: 'rgba(224, 122, 46, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  exportTitle: {
+    ...typography.bodyStrong,
+    color: colors.primary,
+    fontSize: 14,
+  },
+  exportSubtitle: {
+    ...typography.micro,
+    color: colors.textSecondary,
+    marginTop: 2,
+    fontSize: 11,
+    letterSpacing: 0.5,
   },
   filterRow: {
     flexDirection: 'row',
